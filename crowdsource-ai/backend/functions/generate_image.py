@@ -1,27 +1,15 @@
 import os
 import openai
+import re
 
 api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=api_key)
-
-# Load API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
 
 if not api_key:
     raise ValueError(
         "API key not found. Set OPENAI_API_KEY as an environment variable."
     )
 
-
-# response = client.chat.completions.create(
-#     model="gpt-4o-mini",
-#     messages=[
-#         {"role": "system", "content": "You are a helpful assistant."},
-#         {"role": "user", "content": "Hello, how are you?"},
-#     ],
-# )
-
-# print(response.choices[0].message.content)
 
 def generate_svg_icon(keyword: str) -> str:
     """
@@ -49,20 +37,21 @@ def generate_svg_icon(keyword: str) -> str:
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ]
+            ],
         )
 
-        svg_code = response.choices[0].message.content.strip()
-        
-        # Basic validation to check if the response contains valid SVG tags
-        if "<svg" in svg_code and "</svg>" in svg_code:
-            return svg_code
+        response_text = response.choices[0].message.content.strip()
+
+        # Extract only the SVG code using regex
+        match = re.search(r"<svg[\s\S]*?</svg>", response_text, re.MULTILINE)
+        if match:
+            return match.group(0)
         else:
             raise ValueError("Invalid SVG response received.")
-
     except openai.error.OpenAIError as e:
         print(f"Error generating SVG icon: {e}")
         return ""
 
 
-print(generate_svg_icon("party"))
+if __name__ == "__main__":
+    print(generate_svg_icon("party"))
