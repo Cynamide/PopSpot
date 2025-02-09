@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from functions.prompt_template import chat
+from functions.get_events import list_events
+from database.mongo_db_atlas import get_database
 
 app = Flask(__name__)
 CORS(app)
@@ -32,6 +34,16 @@ def prompt_data():
 
     return {
         "message": "Success",
+    }
+
+@app.route("/get-events", methods=["GET"])
+def get_events():
+    db = get_database()
+
+    record = list_events(db)
+
+    return {
+        "message": record,
     }
 
 if __name__ == "__main__":
