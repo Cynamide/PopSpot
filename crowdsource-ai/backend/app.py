@@ -54,8 +54,8 @@ def prompt_data():
     Strict JSON Format:  
     {{
     "event": *main event*,
-    "event_latitude": 0.0,
-    "event_longitude": 0.0,
+    "event_latitude": user_location+-distance,
+    "event_longitude": user_longitude+-distance,
     "status": "value",
     }}
 
