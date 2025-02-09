@@ -21,7 +21,7 @@ def get_static_event_details(curr_location, keyword):
     }
 
 
-def store_event(db, location_keyword):
+def store_event(db, location_keyword, method):
     """
     Stores the event in the 'events' collection and returns the inserted document.
     """
@@ -60,25 +60,37 @@ def store_event(db, location_keyword):
             curr_event = event
             break
 
-    if event_exists and curr_event:
-        # Increment the 'reported_by_users' count
-
-        new_formatted_time, new_formatted_date = get_date_time()
-        result = events_collection.update_one(
-            {"_id": curr_event["_id"]},
-            {
-                "$set": {"time": new_formatted_time, "date": new_formatted_date},
-                "$inc": {"reported_by_users": 1},
-            }
-        )
-        if result.modified_count == 1:
-            print(f"✅ User count updated successfully with ID: {curr_event['_id']}")
-            return curr_event["_id"]
-    else:
-        event_document = get_static_event_details(curr_location, keyword)
-        result = events_collection.insert_one(event_document)
-        print(f"✅ Event stored successfully with ID: {result.inserted_id}")
-        return result.inserted_id
+    if method == "create":
+        if event_exists and curr_event:
+            # Increment the 'reported_by_users' count
+            new_formatted_time, new_formatted_date = get_date_time()
+            result = events_collection.update_one(
+                {"_id": curr_event["_id"]},
+                {
+                    "$set": {"time": new_formatted_time, "date": new_formatted_date},
+                    "$inc": {"reported_by_users": 1},
+                }
+            )
+            if result.modified_count == 1:
+                print(f"✅ User count updated successfully with ID: {curr_event['_id']}")
+                return curr_event["_id"]
+        else:
+            event_document = get_static_event_details(curr_location, keyword)
+            result = events_collection.insert_one(event_document)
+            print(f"✅ Event stored successfully with ID: {result.inserted_id}")
+            return result.inserted_id
+    elif method == "remove":
+        if event_exists and curr_event:
+            # Delete event from collection
+            result = events_collection.delete_one(
+                {"_id": curr_event["_id"]}
+            )
+            if result.deleted_count == 1:
+                print(f"✅ Event deleted successfully with ID: {curr_event['_id']}")
+                return curr_event["_id"]
+        else:
+            print(f"❌ Event for keyword '{keyword}' not found in the database, not deleted.")
+            return None
 
 
 if __name__ == "__main__":
