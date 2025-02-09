@@ -10,6 +10,7 @@ mongo_password = os.getenv("MONGO_PASSWORD", "KHdXrMx8NQFfaIP1")
 encoded_password = urllib.parse.quote_plus(mongo_password)
 MONGO_URI = f"mongodb+srv://{mongo_user}:{encoded_password}@cluster0.b2n8z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
+
 def get_database():
     """
     Connects to MongoDB and returns the 'crowdsource' database instance.

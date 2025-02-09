@@ -1,51 +1,66 @@
+from typing import Optional, Dict, Any
 from database.mongo_db_atlas import get_database
-from database.insert_events import insert_event
+
+# from database.insert_events import insert_event
 from functions.generate_image import generate_svg_icon
+from functions.store_event import store_event
+from functions.store_icon import store_icon
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def store_icon_and_event(keyword):
-    """
-    Generates an SVG icon for the given keyword, stores it in MongoDB,
-    and then creates an event entry using the same keyword.
+def store_icon_and_event(db: Any, keyword: str, location_keyword: Dict):
+    """Store icon and related event in the database."""
+    try:
+        icon_status = store_icon(db, keyword)
 
-    Args:
-        keyword (str): The keyword for the icon.
+        event_status = store_event(db, location_keyword)
 
-    Returns:
-        dict: The inserted event document.
-    """
-    db = get_database()
-    if db is None:
-        print("❌ Database connection failed. Cannot proceed.")
+        return {
+            "icon_id": icon_status,
+            "event_id": event_status,
+            "status": "Success" if icon_status or event_status else "Failed",
+        }
+    except Exception as e:
+        logger.exception("Error in store_icon_and_event: %s", str(e))
         return None
 
-    collection = db["icon_keyword"]
 
-    results = collection.find({}, {"keyword": 1, "_id": 0})
-    existing_keywords = [result["keyword"] for result in results]
-    if keyword in existing_keywords:
-        print(f"Icon for keyword '{keyword}' already exists in the database.")
-    else:
-        # Generate SVG icon
-        svg_icon = generate_svg_icon(keyword)
-        if not svg_icon:
-            print("Failed to generate SVG icon.")
-            return
+def run_main(keyword: str, location_keyword: dict) -> Dict[str, Any]:
+    """Main pipeline execution with proper resource handling."""
+    try:
+        db = get_database()
+        if db is None:
+            logger.error("Failed to establish database connection")
+            return {"status": "error", "message": "Database connection failed"}
 
-        # Create document
-        document = {"icon": svg_icon, "keyword": keyword}
-
-        # Insert into MongoDB
-        result = collection.insert_one(document)
-        print(f"✅ Icon stored successfully with ID: {result.inserted_id}")
-
-    # Insert event after storing the icon
-    event_data = insert_event(keyword)
-    return event_data
+        result = store_icon_and_event(db, keyword, location_keyword)
+        return {
+            "data": result,
+            "keyword": keyword,
+        }
+    except Exception as e:
+        logger.exception("Critical error in run_main: %s", str(e))
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":
-    keyword = "shamini"  # Example keyword
-    event = store_icon_and_event(keyword)
-    print(event)
-    return event
+    # Example usage
+    # location_keyword = {
+    #     "keyword": "celebrate",
+    #     "event_latitude": -122.4194,
+    #     "event_longitude": 37.7748
+    # }
+
+    location_keyword = {
+        "keyword": "new_event",
+        "event_latitude": -122.5,
+        "event_longitude": 38,
+    }
+    keyword = location_keyword["keyword"]
+    result = run_main(keyword, location_keyword)
+    print(f"Execution result for '{keyword}':")
+    print(result)
