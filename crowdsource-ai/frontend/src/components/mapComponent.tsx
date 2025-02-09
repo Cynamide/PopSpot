@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, JSX } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { MicrophoneComponent } from "@/components/MicrophoneComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 
@@ -20,7 +20,8 @@ function MapComponent(): JSX.Element {
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [transcript, setTranscript] = useState<string | null>(null)
+  const json = [{'name': 'celebrate', 'icon': '<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">\n  <circle cx="25" cy="25" r="25" fill="#FFD700"/>\n  <polygon points="25,10 30,20 40,20 32,28 35,38 25,32 15,38 18,28 10,20 20,20" fill="#FF4500"/>\n  <circle cx="20" cy="15" r="2" fill="#FFFFFF"/>\n  <circle cx="30" cy="15" r="2" fill="#FFFFFF"/>\n  <path d="M25,24 L25,34" stroke="#FFFFFF" stroke-width="2"/>\n</svg>', 'summary': 'Sample event generated after SVG creation.', 'timestamp': ['1:34pm','19 Feb'], 'location': {'type': 'Point', 'coordinates': [-122.4194, 37.7749]}, '_id': '67a802f3b622f5436f37f6f2'}]
 
   // Calculate bearing between two points
   const calculateBearing = (
@@ -53,7 +54,6 @@ function MapComponent(): JSX.Element {
 
         // Create custom marker element
         const markerEl = document.createElement('div');
-        markerEl.className = 'custom-marker';
         markerEl.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
         <defs>
@@ -83,10 +83,10 @@ function MapComponent(): JSX.Element {
         }).setLngLat([position.lng, position.lat]).setPopup(
         new mapboxgl.Popup({ offset: 25 }) // add popups
         .setHTML(`
-        <div class="bg-white rounded-lg  p-4 max-w-xs">
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">Your Location</h3>
-          <p class="text-gray-600 text-sm">Latitude: ${position.lat.toFixed(6)}</p>
-          <p class="text-gray-600 text-sm">Longitude: ${position.lng.toFixed(6)}</p>
+        <div class="bg-background border border-border rounded-lg p-4 max-w-xs shadow-lg">
+        <h3 class="text-xl font-semibold text-foreground mb-2">Your Location</h3>
+        <p class="text-sm text-muted-foreground">Latitude: ${position.lat.toFixed(6)}</p>
+        <p class="text-sm text-muted-foreground">Longitude: ${position.lng.toFixed(6)}</p>
         </div>
       `)
         ).addTo(mapRef.current!);
@@ -102,6 +102,33 @@ function MapComponent(): JSX.Element {
     }
   };
 
+  useEffect(()=>{
+
+    if (transcript){
+    console.log(location?.latitude,location?.longitude,location?.heading,transcript)
+
+    json.forEach((m) => {
+        const markerEl = document.createElement('div');
+        markerEl.innerHTML = m.icon
+        new mapboxgl.Marker({
+        element: markerEl,
+        rotationAlignment: 'map'
+        }).setLngLat([m.location.coordinates[0], m.location.coordinates[1]]).setPopup(
+        new mapboxgl.Popup({ offset: 25 }) // add popups
+        .setHTML(`
+        <div class="bg-background border border-border rounded-lg p-4 max-w-xs shadow-lg">
+        <h3 class="text-xl font-semibold text-foreground mb-2">${m.name}</h3>
+        <p class="text-sm text-muted-foreground">${m.timestamp[0]}</p>
+        <p class="text-sm text-muted-foreground">${m.timestamp[1]}</p>
+        </div>
+      `)
+        ).addTo(mapRef.current!);})
+    }
+    
+    
+
+  },[transcript])
+
   // Initialize map and location tracking
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -115,7 +142,6 @@ function MapComponent(): JSX.Element {
     });
 
     let prevPosition: GeolocationPosition | null = null;
-
     // Watch position
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
@@ -134,6 +160,7 @@ function MapComponent(): JSX.Element {
 
         setLocation({ latitude, longitude, heading });
         prevPosition = position;
+        
 
         // Update map and marker
         if (mapRef.current) {
@@ -141,7 +168,7 @@ function MapComponent(): JSX.Element {
           updateMarker({ lng: longitude, lat: latitude }, heading);
         }
 
-        setIsLoading(false);
+        
       },
       (err) => {
         if (err.code === err.TIMEOUT) {
@@ -149,7 +176,6 @@ function MapComponent(): JSX.Element {
         } else {
           setError(`Location error: ${err.message}`);
         }
-        setIsLoading(false);
       },
       {
         enableHighAccuracy: true,
@@ -167,15 +193,6 @@ function MapComponent(): JSX.Element {
     };
   }, []);
 
-  if (isLoading) {
-    return (
-      <Card className="p-4">
-        <div className="flex items-center justify-center h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </Card>
-    );
-  }
 
   if (error) {
     return (
@@ -191,7 +208,7 @@ function MapComponent(): JSX.Element {
         ref={mapContainerRef} 
         className="w-full h-full rounded-lg overflow-hidden"
       />
-      
+      <MicrophoneComponent setTranscript={setTranscript}/>
     </>
   );
 }

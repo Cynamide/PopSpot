@@ -69,24 +69,22 @@
 // };
 
 import * as React from "react";
-import { Button } from "@/components/ui/button"; // shadCN UI or your own button
 import { MicIcon, MicOffIcon } from "lucide-react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 
-export const MicrophoneComponent: React.FC = () => {
+interface MicrophoneComponentProps {
+  setTranscript: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+export const MicrophoneComponent: React.FC<MicrophoneComponentProps> = ({setTranscript }) => {
   const {
     transcript,
     listening,
     browserSupportsSpeechRecognition,
     resetTranscript,
   } = useSpeechRecognition();
-
-  // 1) A helper function to create a JSON object from the transcript
-  const getTranscriptAsJSON = (txt: string) => {
-    return { query: txt };
-  };
 
   if (!browserSupportsSpeechRecognition) {
     return <p>Your browser does not support Speech Recognition.</p>;
@@ -100,8 +98,7 @@ export const MicrophoneComponent: React.FC = () => {
     } else {
       // 3) If already listening, stop recording and create a JSON object
       SpeechRecognition.stopListening();
-      const resultJSON = getTranscriptAsJSON(transcript);
-      console.log("Final JSON result:", resultJSON);
+      setTranscript(transcript)
 
       // You could also pass this JSON to another function, e.g.:
       // sendTranscriptToAPI(resultJSON);
