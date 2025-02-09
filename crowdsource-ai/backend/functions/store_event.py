@@ -1,5 +1,4 @@
-from datetime import datetime
-from .helper import is_within_radius
+from .helper import is_within_radius, get_date_time
 
 
 def get_static_event_details(curr_location, keyword):
@@ -7,13 +6,7 @@ def get_static_event_details(curr_location, keyword):
     Returns static event details such as summary, time (hh:mm AM/PM format),
     and date (dd MMM format).
     """
-    current_time = datetime.utcnow()
-
-    # Convert time to 12-hour format with AM/PM
-    formatted_time = current_time.strftime("%I:%M %p")  # Example: 02:30 PM
-
-    # Convert date to 'dd MMM' format
-    formatted_date = current_time.strftime("%d %b")  # Example: 09 Feb
+    formatted_time, formatted_date = get_date_time()
 
     return {
         "name": keyword,
@@ -24,6 +17,7 @@ def get_static_event_details(curr_location, keyword):
             "type": "Point",
             "coordinates": curr_location,
         },
+        "reported_by_users": 1,
     }
 
 
@@ -38,7 +32,7 @@ def store_event(db, location_keyword):
 
     events_collection = db["events"]
     results = events_collection.find(
-        {}, {"name": 1, "location": 1, "_id": 0}
+        {}, {"name": 1, "location": 1, "_id": 1, "time": 1, "date": 1}
     )  # TODO: add users into this query for ++
     existing_events = [result for result in results]
 
@@ -49,6 +43,7 @@ def store_event(db, location_keyword):
     keyword = location_keyword["keyword"]
 
     event_exists = False
+    curr_event = None
 
     for event in existing_events:
         if event["name"] == keyword and is_within_radius(
@@ -62,10 +57,23 @@ def store_event(db, location_keyword):
                 f"❌ Event for keyword '{location_keyword['keyword']}' already exists in the database."
             )
             event_exists = True
+            curr_event = event
             break
 
-    if event_exists:
-        return None
+    if event_exists and curr_event:
+        # Increment the 'reported_by_users' count
+
+        new_formatted_time, new_formatted_date = get_date_time()
+        result = events_collection.update_one(
+            {"_id": curr_event["_id"]},
+            {
+                "$set": {"time": new_formatted_time, "date": new_formatted_date},
+                "$inc": {"reported_by_users": 1},
+            }
+        )
+        if result.modified_count == 1:
+            print(f"✅ User count updated successfully with ID: {curr_event['_id']}")
+            return curr_event["_id"]
     else:
         event_document = get_static_event_details(curr_location, keyword)
         result = events_collection.insert_one(event_document)
