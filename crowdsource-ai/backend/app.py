@@ -24,6 +24,7 @@ def prompt_data():
         return jsonify({"error": "No data received"}), 400
     
     openai_response = chat(prompt)
+    openai_response['event_latitude'], openai_response['event_longitude'] = openai_response['event_longitude'], openai_response['event_latitude']
     # print(openai_response)
 
     # Calling run_main
