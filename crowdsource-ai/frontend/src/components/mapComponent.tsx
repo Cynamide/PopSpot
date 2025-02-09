@@ -83,8 +83,8 @@ function MapComponent(): JSX.Element {
         }).setLngLat([position.lng, position.lat]).setPopup(
         new mapboxgl.Popup({ offset: 25 }) // add popups
         .setHTML(`
-        <div class="bg-background border border-border rounded-lg p-4 max-w-xs shadow-lg">
-        <h3 class="text-xl font-semibold text-foreground mb-2">Your Location</h3>
+        <div class="">
+        <h3 class="text-lg font-semibold text-foreground mb-2">Your Location</h3>
         <p class="text-sm text-muted-foreground">Latitude: ${position.lat.toFixed(6)}</p>
         <p class="text-sm text-muted-foreground">Longitude: ${position.lng.toFixed(6)}</p>
         </div>
