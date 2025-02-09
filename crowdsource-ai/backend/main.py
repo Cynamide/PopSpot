@@ -46,4 +46,6 @@ def store_icon_and_event(keyword):
 
 if __name__ == "__main__":
     keyword = "shamini"  # Example keyword
-    store_icon_and_event(keyword)
+    event = store_icon_and_event(keyword)
+    print(event)
+    return event

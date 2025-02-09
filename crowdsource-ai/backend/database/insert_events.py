@@ -3,11 +3,21 @@ from database.mongo_db_atlas import get_database
 
 def get_static_event_details():
     """
-    Returns static event details such as summary, timestamp, and location.
+    Returns static event details such as summary, time (hh:mm AM/PM format), 
+    and date (dd MMM format).
     """
+    current_time = datetime.utcnow()
+    
+    # Convert time to 12-hour format with AM/PM
+    formatted_time = current_time.strftime("%I:%M %p")  # Example: 02:30 PM
+    
+    # Convert date to 'dd MMM' format
+    formatted_date = current_time.strftime("%d %b")  # Example: 09 Feb
+
     return {
         "summary": "Sample event generated after SVG creation.",
-        "timestamp": datetime.utcnow(),
+        "time": formatted_time,  # Store time separately in 12-hour format
+        "date": formatted_date,  # Store date in 'dd MMM' format
         "location": {
             "type": "Point",
             "coordinates": [-122.4194, 37.7749]  # Example coordinates (San Francisco)
@@ -31,19 +41,11 @@ def insert_event(keyword):
         return None
     
     events_collection = db["events"]
-    icon_collection = db["icon_keyword"]
-    
-    # Ensure the keyword exists in the icon_keyword collection
-    icon_entry = icon_collection.find_one({"keyword": keyword})
-    if not icon_entry:
-        print(f"❌ No icon found for keyword '{keyword}'. Event not inserted.")
-        return None
     
     # Get event details
     event_details = get_static_event_details()
     event_document = {
         "name": keyword,  # Foreign key reference
-        "icon": icon_entry["icon"],  # Store the SVG icon reference
         **event_details
     }
     
