@@ -1,4 +1,5 @@
 from datetime import datetime
+from .helper import is_within_radius
 
 
 def get_static_event_details(curr_location, keyword):
@@ -50,9 +51,12 @@ def store_event(db, location_keyword):
     event_exists = False
 
     for event in existing_events:
-        if (
-            event["name"] == keyword
-            and event["location"]["coordinates"] == curr_location
+        if event["name"] == keyword and is_within_radius(
+            location_keyword["event_latitude"],
+            location_keyword["event_longitude"],
+            event["location"]["coordinates"][0],
+            event["location"]["coordinates"][1],
+            20
         ):
             print(
                 f"❌ Event for keyword '{location_keyword['keyword']}' already exists in the database."

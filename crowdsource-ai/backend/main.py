@@ -58,7 +58,7 @@ if __name__ == "__main__":
     location_keyword = {
         "keyword": "new_event",
         "event_latitude": -122.5,
-        "event_longitude": 38,
+        "event_longitude": 39.00009,
     }
     keyword = location_keyword["keyword"]
     result = run_main(keyword, location_keyword)
