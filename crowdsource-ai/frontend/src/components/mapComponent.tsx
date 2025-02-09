@@ -165,8 +165,6 @@ function MapComponent(): JSX.Element {
         const markerEl = document.createElement('div');
         markerEl.innerHTML = markerData.icon;
         
-        console.log(markerData.icon)
-
         const newMarker = new mapboxgl.Marker({
             element: markerEl,
             rotationAlignment: 'map'
@@ -265,6 +263,7 @@ function MapComponent(): JSX.Element {
         await updateMarkers();
     });
 
+
     let prevPosition: GeolocationPosition | null = null;
     // Watch position
     const watchId = navigator.geolocation.watchPosition(
@@ -313,6 +312,7 @@ function MapComponent(): JSX.Element {
       if (mapRef.current) {
         mapRef.current.remove();
       }
+
       navigator.geolocation.clearWatch(watchId);
     };
   }, []);

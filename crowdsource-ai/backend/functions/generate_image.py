@@ -3,12 +3,12 @@ import openai
 import re
 
 api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=api_key)
+client = openai.OpenAI(api_key="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")
 
-if not api_key:
-    raise ValueError(
-        "❌ API key not found. Set OPENAI_API_KEY as an environment variable."
-    )
+# if not api_key:
+#     raise ValueError(
+#         "❌ API key not found. Set OPENAI_API_KEY as an environment variable."
+#     )
 
 
 def generate_svg_icon(keyword: str) -> str:
