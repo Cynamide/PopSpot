@@ -20,16 +20,17 @@ def generate_svg_icon(keyword: str) -> str:
 
     Returns:
         str: SVG markup string of the generated icon.
+
+        # The icons should be realistic, recognizable, visually appealing, with a circular background,"
+        "and complete for medium-scale display.  Ensure consistency across different icons.
     """
 
     system_prompt = (
-        "You are an SVG image generator that creates simple, standardized 50x50 pixel icons "
-        "for a custom mapping application. The icons should be recognizable, visually appealing, with a circular background, "
-        "and suitable for medium-scale display. Ensure consistency across different icons. "
+        "You are an SVG image generator that creates simple, standardized 50x50 pixel icons."
         "Return only the SVG code without explanations or extra text."
     )
 
-    user_prompt = f"Generate a simple 50x50 SVG icon representing '{keyword}' as a marker for a custom map, without the keyword text."
+    user_prompt = f"Generate a simple 50x50 SVG icon representing realistic '{keyword}' doodle as a marker for a custom map without the keyword text in it."
 
     try:
         response = client.chat.completions.create(
@@ -51,3 +52,7 @@ def generate_svg_icon(keyword: str) -> str:
     except openai.error.OpenAIError as e:
         print(f"❌ Error generating SVG icon: {e}")
         return ""
+
+
+if __name__ == "__main__":
+    print(generate_svg_icon("ayush"))

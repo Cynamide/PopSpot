@@ -32,9 +32,9 @@ def store_icon_and_event(keyword):
         "keyword": keyword
     }
 
-    # Insert into MongoDB
-    result = collection.insert_one(document)
-    print(f"✅ Icon stored successfully with ID: {result.inserted_id}")
+        # Insert into MongoDB
+        result = collection.insert_one(document)
+        print(f"✅ Icon stored successfully with ID: {result.inserted_id}")
 
     # Insert event after storing the icon
     event_data = insert_event(keyword)
