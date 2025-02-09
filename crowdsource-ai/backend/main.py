@@ -12,12 +12,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def store_icon_and_event(db: Any, keyword: str, location_keyword: Dict):
+def store_icon_and_event(db: Any, keyword: str, location_keyword: Dict, method: str):
     """Store icon and related event in the database."""
     try:
-        icon_status = store_icon(db, keyword)
+        icon_status = None
+        event_status = None
 
-        event_status = store_event(db, location_keyword)
+        if method == "create":
+            icon_status = store_icon(db, keyword)
+
+        event_status = store_event(db, location_keyword, method)
 
         return {
             "icon_id": icon_status,
@@ -29,7 +33,7 @@ def store_icon_and_event(db: Any, keyword: str, location_keyword: Dict):
         return None
 
 
-def run_main(keyword: str, location_keyword: dict) -> Dict[str, Any]:
+def run_main(keyword: str, location_keyword: dict, method: str) -> Dict[str, Any]:
     """Main pipeline execution with proper resource handling."""
     try:
         db = get_database()
@@ -37,7 +41,7 @@ def run_main(keyword: str, location_keyword: dict) -> Dict[str, Any]:
             logger.error("Failed to establish database connection")
             return {"status": "error", "message": "Database connection failed"}
 
-        result = store_icon_and_event(db, keyword, location_keyword)
+        result = store_icon_and_event(db, keyword, location_keyword, method)
         return {
             "data": result,
             "keyword": keyword,
@@ -56,11 +60,12 @@ if __name__ == "__main__":
     # }
 
     location_keyword = {
-        "keyword": "railroad",
+        "keyword": "lollipop",
         "event_latitude": -45.5,
         "event_longitude": 39.00008,
     }
+    method = "remove"
     keyword = location_keyword["keyword"]
-    result = run_main(keyword, location_keyword)
+    result = run_main(keyword, location_keyword, method)
     print(f"Execution result for '{keyword}':")
     print(result)
