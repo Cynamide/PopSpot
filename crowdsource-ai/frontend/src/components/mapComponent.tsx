@@ -3,22 +3,17 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MicrophoneComponent } from "@/components/MicrophoneComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {markers} from "@/components/dummy"
+import { useToast } from '@/hooks/use-toast';
+import { LocateFixed } from 'lucide-react';
 
 
-event
+
 interface Location {
   latitude: number;
   longitude: number;
   heading: number | null;
 }
 
-interface QueryData {
-    "latitude": number;
-    "longitude": number;
-    "heading": number;
-    "query": string;
-}
 interface QueryResponse {
     message: string;
     status: number;
@@ -40,7 +35,9 @@ interface MapMarker extends mapboxgl.Marker {
   _id?: string;
 }
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiYWFnYXJ3MzgzOCIsImEiOiJjbTZ3b2VsNXUwZXp0MmtwczF0a2N1dXRzIn0.cD2aom0-V-ZT--XSDj7TVw'; // Replace with your Mapbox token
+const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
+mapboxgl.accessToken = import.meta.env.VITE_ACCESS_TOKEN;
 
 function MapComponent(): JSX.Element {
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -51,6 +48,12 @@ function MapComponent(): JSX.Element {
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null)
+
+  const [updateCounter, setUpdateCounter] = useState(0);
+
+  const { toast } = useToast()
+
+
 
   // Calculate bearing between two points
   const calculateBearing = (
@@ -77,8 +80,7 @@ function MapComponent(): JSX.Element {
     // Fetch events from the API
     const fetchEvents = async (): Promise<MarkerData[]> => {
     try {
-        const response = await fetch('http://127.0.0.1:5000/get-events');
-        console.log(response)
+        const response = await fetch(`${baseUrl}/get-events`);
         const data = await response.json();
         return data.message;
     } catch (error) {
@@ -89,14 +91,18 @@ function MapComponent(): JSX.Element {
 
     const postQuery = async (transcript: string): Promise<QueryResponse | undefined> => {
     try {
+        
+        const schedule =  transcript.split(' ').filter(word => word === "schedule").length > 0
+        
         const query = {
             "latitude": location?.latitude,
             "longitude": location?.longitude,
             "heading": location?.heading,
             "query": transcript,
+            "schedule": schedule,
 
         }
-        const response = await fetch('http://127.0.0.1:5000/prompt-data', {
+        const response = await fetch(`${baseUrl}/prompt-data`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -105,10 +111,17 @@ function MapComponent(): JSX.Element {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            toast({
+          description: "There was a problem with your query. Please try again",
+        })
         }
         
         const data = await response.json();
+        if (data.message === "Failed"){
+            toast({
+          description: "There was a problem with your query. Please try again",
+        })
+        }
         return data;
     } catch (error) {
         console.error('Error sending prompt:', error);
@@ -240,8 +253,7 @@ function MapComponent(): JSX.Element {
   useEffect(()=>{
 
     if (transcript) {
-    postQuery(transcript)
-    updateMarkers()
+    postQuery(transcript).then(()=>updateMarkers()).then(()=>setUpdateCounter((prev) => prev + 1))
     }
   },[transcript])
 
@@ -263,7 +275,10 @@ function MapComponent(): JSX.Element {
         await updateMarkers();
     });
 
-
+    // Set up 5-second interval for marker updates
+    const intervalId = setInterval(async () => {
+        await updateMarkers();
+    }, 5000);
     let prevPosition: GeolocationPosition | null = null;
     // Watch position
     const watchId = navigator.geolocation.watchPosition(
@@ -292,6 +307,8 @@ function MapComponent(): JSX.Element {
         }
 
         
+
+        
       },
       (err) => {
         if (err.code === err.TIMEOUT) {
@@ -312,7 +329,7 @@ function MapComponent(): JSX.Element {
       if (mapRef.current) {
         mapRef.current.remove();
       }
-
+      clearInterval(intervalId); // Clean up the interval
       navigator.geolocation.clearWatch(watchId);
     };
   }, []);
@@ -332,6 +349,10 @@ function MapComponent(): JSX.Element {
         ref={mapContainerRef} 
         className="w-full h-full rounded-lg overflow-hidden"
       />
+      <LocateFixed onClick={()=>{if (mapRef.current) {
+          mapRef.current.setCenter([location!.longitude, location!.latitude]);
+          updateMarker({ lng: location!.longitude, lat: location!.latitude }, location!.heading);
+        }}} color='blue'  className=' bg-white cursor-pointer fixed bottom-12 right-4 size-10 transform -translate-x-1/2 z-50'/>
       <MicrophoneComponent setTranscript={setTranscript}/>
     </>
   );
