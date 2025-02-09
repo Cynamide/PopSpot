@@ -1,15 +1,43 @@
 import { useRef, useEffect, useState, JSX } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Card } from "@/components/ui/card";
 import { MicrophoneComponent } from "@/components/MicrophoneComponent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
+import {markers} from "@/components/dummy"
 
+
+event
 interface Location {
   latitude: number;
   longitude: number;
   heading: number | null;
+}
+
+interface QueryData {
+    "latitude": number;
+    "longitude": number;
+    "heading": number;
+    "query": string;
+}
+interface QueryResponse {
+    message: string;
+    status: number;
+}
+
+interface MarkerData {
+  _id: string;
+  name: string;
+  icon: string;
+  location: {
+    type: string;
+    coordinates: number[];
+  };
+  reported_by_users: number;
+  timestamp: string[];
+}
+
+interface MapMarker extends mapboxgl.Marker {
+  _id?: string;
 }
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiYWFnYXJ3MzgzOCIsImEiOiJjbTZ3b2VsNXUwZXp0MmtwczF0a2N1dXRzIn0.cD2aom0-V-ZT--XSDj7TVw'; // Replace with your Mapbox token
@@ -18,10 +46,11 @@ function MapComponent(): JSX.Element {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const markersRef = useRef<Map<string, MapMarker>>(new Map());
+
   const [location, setLocation] = useState<Location | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null)
-  const json = [{'name': 'celebrate', 'icon': '<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">\n  <circle cx="25" cy="25" r="25" fill="#FFD700"/>\n  <polygon points="25,10 30,20 40,20 32,28 35,38 25,32 15,38 18,28 10,20 20,20" fill="#FF4500"/>\n  <circle cx="20" cy="15" r="2" fill="#FFFFFF"/>\n  <circle cx="30" cy="15" r="2" fill="#FFFFFF"/>\n  <path d="M25,24 L25,34" stroke="#FFFFFF" stroke-width="2"/>\n</svg>', 'summary': 'Sample event generated after SVG creation.', 'timestamp': ['1:34pm','19 Feb'], 'location': {'type': 'Point', 'coordinates': [-122.4194, 37.7749]}, '_id': '67a802f3b622f5436f37f6f2'}]
 
   // Calculate bearing between two points
   const calculateBearing = (
@@ -44,6 +73,114 @@ function MapComponent(): JSX.Element {
     const bearing = (Math.atan2(y, x) * 180) / Math.PI;
     return (bearing + 360) % 360;
   };
+
+    // Fetch events from the API
+    const fetchEvents = async (): Promise<MarkerData[]> => {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/get-events');
+        console.log(response)
+        const data = await response.json();
+        return data.message;
+    } catch (error) {
+        console.error('Error fetching events:', error);
+        return [];
+    }
+    };
+
+    const postQuery = async (transcript: string): Promise<QueryResponse | undefined> => {
+    try {
+        const query = {
+            "latitude": location?.latitude,
+            "longitude": location?.longitude,
+            "heading": location?.heading,
+            "query": transcript,
+
+        }
+        const response = await fetch('http://127.0.0.1:5000/prompt-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(query)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error sending prompt:', error);
+        return undefined;
+    }
+};
+
+
+    const createPopup = (markerData: MarkerData) => {
+    return new mapboxgl.Popup({ offset: 25 })
+        .setHTML(`
+        <div class="bg-background border border-border rounded-lg p-4 max-w-xs shadow-lg">
+            <h3 class="text-xl font-semibold text-foreground mb-2">${markerData.name}</h3>
+            <p class="text-sm text-muted-foreground">${markerData.timestamp[0]}</p>
+            <p class="text-sm text-muted-foreground">${markerData.timestamp[1]}</p>
+            <p class="text-sm text-muted-foreground mt-2">Reported by ${markerData.reported_by_users} user${markerData.reported_by_users !== 1 ? 's' : ''}</p>
+        </div>
+        `);
+    };
+
+
+    const updateMarkers = async () => {
+    if (!mapRef.current) return;
+
+    const newMarkerData = await fetchEvents();
+    const currentMarkerIds = new Set(markersRef.current.keys());
+    const newMarkerIds = new Set(newMarkerData.map(m => m._id));
+
+    // Remove markers that don't exist in new data
+    currentMarkerIds.forEach(id => {
+        if (!newMarkerIds.has(id)) {
+        const marker = markersRef.current.get(id);
+        if (marker) {
+            marker.remove();
+            markersRef.current.delete(id);
+        }
+        }
+    });
+
+    // Add or update markers
+    newMarkerData.forEach(markerData => {
+        const existingMarker = markersRef.current.get(markerData._id);
+        
+        if (existingMarker) {
+        // Update existing marker
+        existingMarker
+            .setLngLat([markerData.location.coordinates[0],markerData.location.coordinates[1]])
+            .setPopup(createPopup(markerData));
+        
+        const el = existingMarker.getElement();
+        el.innerHTML = markerData.icon;
+        } else {
+        // Create new marker
+        const markerEl = document.createElement('div');
+        markerEl.innerHTML = markerData.icon;
+        
+        console.log(markerData.icon)
+
+        const newMarker = new mapboxgl.Marker({
+            element: markerEl,
+            rotationAlignment: 'map'
+        })
+            .setLngLat([markerData.location.coordinates[0],markerData.location.coordinates[1]])
+            .setPopup(createPopup(markerData))
+            .addTo(mapRef.current !);
+
+        (newMarker as MapMarker)._id = markerData._id;
+        markersRef.current.set(markerData._id, newMarker as MapMarker);
+        }
+    });
+    };
+
 
   // Update marker position and rotation
   const updateMarker = (
@@ -104,30 +241,12 @@ function MapComponent(): JSX.Element {
 
   useEffect(()=>{
 
-    if (transcript){
-    console.log(location?.latitude,location?.longitude,location?.heading,transcript)
-
-    json.forEach((m) => {
-        const markerEl = document.createElement('div');
-        markerEl.innerHTML = m.icon
-        new mapboxgl.Marker({
-        element: markerEl,
-        rotationAlignment: 'map'
-        }).setLngLat([m.location.coordinates[0], m.location.coordinates[1]]).setPopup(
-        new mapboxgl.Popup({ offset: 25 }) // add popups
-        .setHTML(`
-        <div class="bg-background border border-border rounded-lg p-4 max-w-xs shadow-lg">
-        <h3 class="text-xl font-semibold text-foreground mb-2">${m.name}</h3>
-        <p class="text-sm text-muted-foreground">${m.timestamp[0]}</p>
-        <p class="text-sm text-muted-foreground">${m.timestamp[1]}</p>
-        </div>
-      `)
-        ).addTo(mapRef.current!);})
+    if (transcript) {
+    postQuery(transcript)
+    updateMarkers()
     }
-    
-    
-
   },[transcript])
+
 
   // Initialize map and location tracking
   useEffect(() => {
@@ -139,6 +258,11 @@ function MapComponent(): JSX.Element {
       style: 'mapbox://styles/mapbox/streets-v12', // Default style
       zoom: 15,
       center: [0, 0] // Initial center (will be updated with user location)
+    });
+
+    // After map loads, fetch and add initial markers
+    mapRef.current.on('load', async () => {
+        await updateMarkers();
     });
 
     let prevPosition: GeolocationPosition | null = null;
