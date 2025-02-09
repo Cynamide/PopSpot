@@ -2,14 +2,15 @@ from database.mongo_db_atlas import get_database
 from database.insert_events import insert_event
 from functions.generate_image import generate_svg_icon
 
+
 def store_icon_and_event(keyword):
     """
-    Generates an SVG icon for the given keyword, stores it in MongoDB, 
+    Generates an SVG icon for the given keyword, stores it in MongoDB,
     and then creates an event entry using the same keyword.
-    
+
     Args:
         keyword (str): The keyword for the icon.
-    
+
     Returns:
         dict: The inserted event document.
     """
@@ -20,17 +21,19 @@ def store_icon_and_event(keyword):
 
     collection = db["icon_keyword"]
 
-    # Generate SVG icon
-    svg_icon = generate_svg_icon(keyword)
-    if not svg_icon:
-        print("❌ Failed to generate SVG icon.")
-        return None
+    results = collection.find({}, {"keyword": 1, "_id": 0})
+    existing_keywords = [result["keyword"] for result in results]
+    if keyword in existing_keywords:
+        print(f"Icon for keyword '{keyword}' already exists in the database.")
+    else:
+        # Generate SVG icon
+        svg_icon = generate_svg_icon(keyword)
+        if not svg_icon:
+            print("Failed to generate SVG icon.")
+            return
 
-    # Create document for icon storage
-    document = {
-        "icon": svg_icon,
-        "keyword": keyword
-    }
+        # Create document
+        document = {"icon": svg_icon, "keyword": keyword}
 
         # Insert into MongoDB
         result = collection.insert_one(document)
@@ -40,7 +43,7 @@ def store_icon_and_event(keyword):
     event_data = insert_event(keyword)
     return event_data
 
+
 if __name__ == "__main__":
-    keyword = "celebrate"  # Example keyword
-    event_info = store_icon_and_event(keyword)
-    print("Stored event:", event_info)
+    keyword = "shamini"  # Example keyword
+    store_icon_and_event(keyword)

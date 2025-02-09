@@ -55,4 +55,4 @@ def generate_svg_icon(keyword: str) -> str:
 
 
 if __name__ == "__main__":
-    print(generate_svg_icon("ayush"))
+    print(generate_svg_icon("party"))
