@@ -24,6 +24,7 @@ def get_static_event_details(curr_location, keyword):
             "type": "Point",
             "coordinates": curr_location,
         },
+        "reported_by_users": 1,
     }
 
 
@@ -38,7 +39,7 @@ def store_event(db, location_keyword):
 
     events_collection = db["events"]
     results = events_collection.find(
-        {}, {"name": 1, "location": 1, "_id": 0}
+        {}, {"name": 1, "location": 1, "_id": 1}
     )  # TODO: add users into this query for ++
     existing_events = [result for result in results]
 
@@ -49,6 +50,7 @@ def store_event(db, location_keyword):
     keyword = location_keyword["keyword"]
 
     event_exists = False
+    curr_event = None
 
     for event in existing_events:
         if event["name"] == keyword and is_within_radius(
@@ -62,10 +64,18 @@ def store_event(db, location_keyword):
                 f"❌ Event for keyword '{location_keyword['keyword']}' already exists in the database."
             )
             event_exists = True
+            curr_event = event
             break
 
-    if event_exists:
-        return None
+    if event_exists and curr_event:
+        # Increment the 'reported_by_users' count
+        result = events_collection.update_one(
+            {"_id": curr_event["_id"]},
+            {"$inc": {"reported_by_users": 1}},
+        )
+        if result.modified_count == 1:
+            print(f"✅ User count updated successfully with ID: {curr_event['_id']}")
+            return curr_event["_id"]
     else:
         event_document = get_static_event_details(curr_location, keyword)
         result = events_collection.insert_one(event_document)
