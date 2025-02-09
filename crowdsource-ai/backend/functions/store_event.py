@@ -40,7 +40,7 @@ def store_event(db, location_keyword, method):
         location_keyword["event_latitude"],
         location_keyword["event_longitude"],
     ]
-    keyword = location_keyword["keyword"]
+    keyword = location_keyword["event"]
 
     event_exists = False
     curr_event = None
@@ -54,7 +54,7 @@ def store_event(db, location_keyword, method):
             20
         ):
             print(
-                f"❌ Event for keyword '{location_keyword['keyword']}' already exists in the database."
+                f"❌ Event for keyword '{location_keyword['event']}' already exists in the database."
             )
             event_exists = True
             curr_event = event

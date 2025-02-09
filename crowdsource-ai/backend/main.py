@@ -51,21 +51,15 @@ def run_main(keyword: str, location_keyword: dict, method: str) -> Dict[str, Any
         return {"status": "error", "message": str(e)}
 
 
-if __name__ == "__main__":
-    # Example usage
-    # location_keyword = {
-    #     "keyword": "celebrate",
-    #     "event_latitude": -122.4194,
-    #     "event_longitude": 37.7748
-    # }
+# if __name__ == "__main__":
 
-    location_keyword = {
-        "keyword": "lollipop",
-        "event_latitude": -45.5,
-        "event_longitude": 39.00008,
-    }
-    method = "remove"
-    keyword = location_keyword["keyword"]
-    result = run_main(keyword, location_keyword, method)
-    print(f"Execution result for '{keyword}':")
-    print(result)
+#     location_keyword = {
+#         "keyword": "lollipop",
+#         "event_latitude": -45.5,
+#         "event_longitude": 39.00008,
+#     }
+#     method = "remove"
+#     keyword = location_keyword["keyword"]
+#     result = run_main(keyword, location_keyword, method)
+#     print(f"Execution result for '{keyword}':")
+#     print(result)
